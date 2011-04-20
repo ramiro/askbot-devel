@@ -151,9 +151,7 @@ class QuestionQuerySet(models.query.QuerySet):
         from askbot.conf import settings as askbot_settings
         # Filter out tags not associated with the requested category
         if category and askbot_settings.ENABLE_CATEGORIES:
-            category_tags = category.tags.all()
-            for tag in category_tags:
-                qs = qs.filter(tags__name = tag)
+            qs = qs.filter(tags__categories=category)
 
         if search_query:
             qs = qs.get_by_text_query(search_query)

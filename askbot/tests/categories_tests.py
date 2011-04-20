@@ -532,41 +532,8 @@ class QuestionFilteringTests(TestCase):
         #mod1.save()
         # A normal user
         user1 = User.objects.create_user(username='user1', email='user1@example.com', password='123')
-        # Setup a small category tree
-        root = Category.objects.create(name=u'Root')
-        c1 = Category.objects.create(name=u'category1', parent=root)
-        Category.objects.create(name=u'category2', parent=c1)
-        c3 = Category.objects.create(name=u'category3', parent=root)
-        c4 = Category.objects.create(name=u'category4', parent=root)
-        c5 = Category.objects.create(name=u'category5', parent=root)
-        c6 = Category.objects.create(name=u'category6', parent=root)
 
-        tag1 = Tag.objects.create(name=u'tag1', created_by=owner)
-        tag2 = Tag.objects.create(name=u'tag2', created_by=owner)
-        tag2.categories.add(c1)
-        tag3 = Tag.objects.create(name=u'tag3', created_by=owner)
-        tag3.categories.add(c3)
-        tag4 = Tag.objects.create(name=u'tag4', created_by=owner)
-        # TODO: Why doesn't ``c4.tags.add(tag5, tag6)`` work?
-        tag5 = Tag.objects.create(name=u'tag5', created_by=owner)
-        tag5.categories.add(c4)
-        tag6 = Tag.objects.create(name=u'tag6', created_by=owner)
-        tag6.categories.add(c4)
-        tag7 = Tag.objects.create(name=u'tag7', created_by=owner)
-        tag7.categories.add(c5, c6)
-
-        q1 = Question.objects.create(title=u'Question #1', author=user1, last_activity_by=user1)
-        q1.tags.add(tag1)
-        q2 = Question.objects.create(title=u'Question #2', author=user1, last_activity_by=user1)
-        q2.tags.add(tag1)
-        q3 = Question.objects.create(title=u'Question #3', author=user1, last_activity_by=user1)
-        q4 = Question.objects.create(title=u'Question #4', author=user1, last_activity_by=user1)
-        tag3.questions.add(q3, q4)
-        q5 = Question.objects.create(title=u'Question #5', author=user1, last_activity_by=user1)
-        q5.tags.add(tag5, tag6)
-        q6 = Question.objects.create(title=u'Question #6', author=user1, last_activity_by=user1)
-        q6.tags.add(tag5, tag6)
-
+        # Create the following Category - Tag - Question setup:
         #
         #                              tag1 <=*====*=> question q1
         #
@@ -583,6 +550,54 @@ class QuestionFilteringTests(TestCase):
         # category5         <===*==*=> tag7 <=*====*=> question q6
         # category6         <==/
         #
+        # category7         <=*==*===> tag8 <===*==*=> question q7
+        #                         \==> tag9 <===*==*=> question q8
+        #
+        # category8
+        #
+        root = Category.objects.create(name=u'Everything')
+        c1 = Category.objects.create(name=u'category1', parent=root)
+        Category.objects.create(name=u'category2', parent=c1)
+        c3 = Category.objects.create(name=u'category3', parent=root)
+        c4 = Category.objects.create(name=u'category4', parent=root)
+        c5 = Category.objects.create(name=u'category5', parent=root)
+        c6 = Category.objects.create(name=u'category6', parent=root)
+        c7 = Category.objects.create(name=u'category7', parent=root)
+        c8 = Category.objects.create(name=u'category8', parent=root)
+
+        tag1 = Tag.objects.create(name=u'tag1', created_by=owner)
+        tag2 = Tag.objects.create(name=u'tag2', created_by=owner)
+        tag2.categories.add(c1)
+        tag3 = Tag.objects.create(name=u'tag3', created_by=owner)
+        tag3.categories.add(c3)
+        tag4 = Tag.objects.create(name=u'tag4', created_by=owner)
+        # TODO: Why doesn't ``c4.tags.add(tag5, tag6)`` work?
+        tag5 = Tag.objects.create(name=u'tag5', created_by=owner)
+        tag5.categories.add(c4)
+        tag6 = Tag.objects.create(name=u'tag6', created_by=owner)
+        tag6.categories.add(c4)
+        tag7 = Tag.objects.create(name=u'tag7', created_by=owner)
+        tag7.categories.add(c5, c6)
+        tag8 = Tag.objects.create(name=u'tag8', created_by=owner)
+        tag8.categories.add(c7)
+        tag9 = Tag.objects.create(name=u'tag9', created_by=owner)
+        tag9.categories.add(c7)
+
+        q1 = Question.objects.create(title=u'Question #1', author=user1, last_activity_by=user1)
+        q1.tags.add(tag1)
+        q2 = Question.objects.create(title=u'Question #2', author=user1, last_activity_by=user1)
+        q2.tags.add(tag1)
+        q3 = Question.objects.create(title=u'Question #3', author=user1, last_activity_by=user1)
+        q4 = Question.objects.create(title=u'Question #4', author=user1, last_activity_by=user1)
+        tag3.questions.add(q3, q4)
+        q5 = Question.objects.create(title=u'Question #5', author=user1, last_activity_by=user1)
+        q5.tags.add(tag5, tag6)
+        q6 = Question.objects.create(title=u'Question #6', author=user1, last_activity_by=user1)
+        q6.tags.add(tag7)
+        q7 = Question.objects.create(title=u'Question #7', author=user1, last_activity_by=user1)
+        q7.tags.add(tag8)
+        q8 = Question.objects.create(title=u'Question #8', author=user1, last_activity_by=user1)
+        q8.tags.add(tag9)
 
         askbot_settings.update('ENABLE_CATEGORIES', True)
 
@@ -622,40 +637,40 @@ class QuestionFilteringTests(TestCase):
         """All questions should be shown when no category filtering is in effect"""
         r = self.client.get('/%s' % _('questions/'))
         self.assertEqual(200, r.status_code)
-        for q in range(1, 6):
-            self.assertContains(r, u"Question #%d" % q)
+        for q in Question.objects.all():
+            self.assertContains(r, q.title)
 
-    def test_filtering(self):
-        """Question filtering by category"""
-        # Empty category
-        r = self.client.get('/%scategory5' % _('questions/'))
-        self.assertEqual(200, r.status_code)
-        for q in range(1, 6):
-            self.assertNotContains(r, u"Question #%d" % q)
+    def test_filter_empty_category(self):
+        """Question filtering by an empty category"""
+        # Empty categories
+        for cat in (2, 8):
+            r = self.client.get('/%scategory%d' % (_('questions/'), cat))
+            self.assertEqual(200, r.status_code)
+            for q in Question.objects.all():
+                self.assertNotContains(r, q.title)
 
-    def test_filter_1tag_manyq(self):
+    def test_filter_1tag_manyqs(self):
         """Filter several questions associated to a category via one tag."""
         r = self.client.get('/%scategory3' % _('questions/'))
         self.assertEqual(200, r.status_code)
-        self.assertNotContains(r, u"Question #1")
-        self.assertNotContains(r, u"Question #2")
-        self.assertNotContains(r, u"Question #5")
+        for q in Question.objects.exclude(title=u"Question #3").exclude(title=u"Question #4"):
+            self.assertNotContains(r, q.title)
         self.assertContains(r, u"Question #3")
         self.assertContains(r, u"Question #4")
 
-    def test_filter_manytag_1q(self):
+    def test_filter_manytags_1q(self):
         """Filter one question associated to a category via several tags."""
         r = self.client.get('/%scategory4' % _('questions/'))
         self.assertEqual(200, r.status_code)
-        for q in range(1, 5):
-            self.assertNotContains(r, u"Question #%d" % q)
+        for q in Question.objects.exclude(title=u"Question #5"):
+            self.assertNotContains(r, q.title)
         self.assertContains(r, u"Question #5")
 
-    def test_filter_manycat_1tag_1q(self):
-        """One question associated to several categories via one several tags. Filter by each of the categories"""
+    def test_filter_manycats_1tag_1q(self):
+        """One question associated to several categories via one tag. Filter by each of the categories"""
         for cat in (5, 6):
             r = self.client.get('/%scategory%d' % (_('questions/'), cat))
             self.assertEqual(200, r.status_code)
-            for q in range(1, 6):
-                self.assertNotContains(r, u"Question #%d" % q)
+            for q in Question.objects.exclude(title=u"Question #6"):
+                self.assertNotContains(r, q.title)
             self.assertContains(r, u"Question #6")
