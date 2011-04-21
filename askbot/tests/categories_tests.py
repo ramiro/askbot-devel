@@ -576,21 +576,25 @@ class QuestionFilteringTests(TestCase):
         #
         # category1         <=*====*=> tag2 <=*====*=> question q2
         #     |
-        #      -- category2
+        #     `-- category2
         #
         # category3         <=*====*=> tag3 <=*==*===> question q3
-        #                                         \==> question q4
+        #                                          \=> question q4
         #
         # category4         <=*==*===> tag5 <===*==*=> question q5
-        #                         \==> tag6 <==/
+        #                          \=> tag6 <=/
         #
         # category5         <===*==*=> tag7 <=*====*=> question q6
-        # category6         <==/
+        # category6         <=/
         #
         # category7         <=*==*===> tag8 <===*==*=> question q7
-        #                         \==> tag9 <===*==*=> question q8
+        #                          \=> tag9 <===*==*=> question q8
         #
         # category8
+        #
+        # category9         <=*====*=> tag10 <=*====*=> question q9
+        #    |
+        #    `-- category10 <=*====*=> tag11 <=*====*=> question qA
         #
         root = Category.objects.create(name=u'Everything')
         c1 = Category.objects.create(name=u'category1', parent=root)
@@ -601,6 +605,8 @@ class QuestionFilteringTests(TestCase):
         c6 = Category.objects.create(name=u'category6', parent=root)
         c7 = Category.objects.create(name=u'category7', parent=root)
         c8 = Category.objects.create(name=u'category8', parent=root)
+        c9 = Category.objects.create(name=u'category9', parent=root)
+        c10 = Category.objects.create(name=u'category10', parent=c9)
 
         tag1 = Tag.objects.create(name=u'tag1', created_by=owner)
         tag2 = Tag.objects.create(name=u'tag2', created_by=owner)
@@ -619,6 +625,10 @@ class QuestionFilteringTests(TestCase):
         tag8.categories.add(c7)
         tag9 = Tag.objects.create(name=u'tag9', created_by=owner)
         tag9.categories.add(c7)
+        tag10 = Tag.objects.create(name=u'tag10', created_by=owner)
+        tag10.categories.add(c9)
+        tag11 = Tag.objects.create(name=u'tag11', created_by=owner)
+        tag11.categories.add(c10)
 
         q1 = Question.objects.create(title=u'Question #1', author=user1, last_activity_by=user1)
         q1.tags.add(tag1)
@@ -635,6 +645,10 @@ class QuestionFilteringTests(TestCase):
         q7.tags.add(tag8)
         q8 = Question.objects.create(title=u'Question #8', author=user1, last_activity_by=user1)
         q8.tags.add(tag9)
+        q9 = Question.objects.create(title=u'Question #9', author=user1, last_activity_by=user1)
+        q9.tags.add(tag10)
+        qA = Question.objects.create(title=u'Question #A', author=user1, last_activity_by=user1)
+        qA.tags.add(tag11)
 
         askbot_settings.update('ENABLE_CATEGORIES', True)
 
@@ -711,3 +725,22 @@ class QuestionFilteringTests(TestCase):
             for q in Question.objects.exclude(title=u"Question #6"):
                 self.assertNotContains(r, q.title)
             self.assertContains(r, u"Question #6")
+
+    def test_filter_categories_subtree(self):
+        """Selection of questions associated to tags associated to sub-categories of a given category."""
+        r = self.client.get('/%scategory9' % _('questions/'))
+        self.assertEqual(200, r.status_code)
+        for q in Question.objects.exclude(
+                title=u"Question #9"
+            ).exclude(title=u"Question #A"):
+            self.assertNotContains(r, q.title)
+        self.assertContains(r, u"Question #9")
+        self.assertContains(r, u"Question #A")
+
+        # filtering by the sub-category should show only questions associated
+        # with it:
+        r = self.client.get('/%scategory10' % _('questions/'))
+        self.assertEqual(200, r.status_code)
+        for q in Question.objects.exclude(title=u"Question #A"):
+            self.assertNotContains(r, q.title)
+        self.assertContains(r, u"Question #A")

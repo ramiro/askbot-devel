@@ -412,7 +412,7 @@ def delete_category(request):
         if token is None:
             response_data['status'] = 'need_confirmation'
             response_data['token'] = CategoriesApiTokenGenerator().make_token(node)
-            response_data['tags'] = [t[0] for t in node.tags.values_list('name')]
+            response_data['tags'] = list(node.tags.values_list('name', flat=True))
         else:
             # Let any exception that happens during deletion bubble up
             node.tags.clear()
@@ -423,13 +423,12 @@ def delete_category(request):
 
 def get_categories(request):
     """
-    Helper view fro client-side autocomplete code.
+    Helper view for client-side autocomplete code.
     Get a listing of all categories. Meant to be called using ajax and GET HTTP
     method. Available to the admin user only.
     JSON request: N/A
     response: 'text/plain' list of lines with format '<cat name>|<cat_id>'
     """
-    # TODO: How should we report errors to the client? using text? JSON?
     if not askbot_settings.ENABLE_CATEGORIES:
         raise Http404
     if request.method != 'GET':

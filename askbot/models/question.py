@@ -149,9 +149,14 @@ class QuestionQuerySet(models.query.QuerySet):
         #have to import this at run time, otherwise there
         #a circular import dependency...
         from askbot.conf import settings as askbot_settings
-        # Filter out tags not associated with the requested category
+
         if category and askbot_settings.ENABLE_CATEGORIES:
-            qs = qs.filter(tags__categories=category)
+            # Filter out questions not associated with the requested category
+            cat_pks = category.get_descendants(include_self=True).values_list(
+                    'pk', flat=True)
+            cat_tree_tags = Tag.objects.filter(categories__in=list(cat_pks))
+            cat_tree_tags_pks = cat_tree_tags.values_list('pk', flat=True)
+            qs = qs.filter(tags__in=list(cat_tree_tags_pks))
 
         if search_query:
             qs = qs.get_by_text_query(search_query)
