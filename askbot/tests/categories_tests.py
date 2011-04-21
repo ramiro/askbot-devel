@@ -314,6 +314,22 @@ class ViewsTests(AjaxTests):
         data = self.assertAjaxSuccess(r)
         self.assertEqual(data['cats'], [{'id': self.c1.id, 'name': self.c1.name}])
 
+    def test_tag_categories_escaping(self):
+        self.client.login(username='owner', password='secret')
+        # Add a category with a XSS attack
+        xss_cat = Category.objects.create(name=u'Item</li></ul><script type="text/javascript">alert(\'Hello\');</script>', parent=self.root)
+        # Associate it to a tag
+        a_tag = Tag.objects.create(name=u'atag', created_by=self.owner)
+        a_tag.categories.add(xss_cat)
+        # Now query for the categories associated with the tag
+        r = self.ajax_post_json(reverse('get_tag_categories'), {'tag_id': a_tag.id})
+        data = self.assertAjaxSuccess(r)
+        # It shouldn't have naked HTML tags (a XSS vector)
+        self.assertFalse(
+            "Item</li></ul><script type=\"text/javascript\">alert('Hello');</script>" in data['cats'][0]['name'],
+            "Views that output category names shouldn't be vulnerable to XSS"
+        )
+
     # `remove_tag_from_category` view tests
 
     def test_remove_tag_category__no_permission(self):
@@ -526,6 +542,22 @@ class ViewsTests(AjaxTests):
         r = self.ajax_get(reverse('categories_list'))
         self.assertEqual(r.status_code, 200)
 
+    def test_category_autocomplete_helper_escaping(self):
+        self.client.login(username='owner', password='secret')
+        # Add a category with a XSS attack
+        xss_cat = Category.objects.create(name=u'Item</li></ul><script type="text/javascript">alert(\'Bye\');</script>', parent=self.root)
+        # Associate it to a tag
+        a_tag = Tag.objects.create(name=u'atag', created_by=self.owner)
+        a_tag.categories.add(xss_cat)
+        # query for all categories
+        r = self.ajax_get(reverse('categories_list'))
+        self.assertEqual(r.status_code, 200)
+        # It shouldn't have naked HTML tags (a XSS vector)
+        self.assertFalse(
+            "Item</li></ul><script type=\"text/javascript\">alert('Bye');</script>" in r.content,
+            "Views that output category names shouldn't be vulnerable to XSS"
+        )
+
 
 class QuestionFilteringTests(TestCase):
     def setUp(self):
@@ -534,10 +566,7 @@ class QuestionFilteringTests(TestCase):
         owner.is_staff = True
         owner.is_superuser = True
         owner.save()
-        # A moderator
-        #mod1 = create_user(username='mod1', email='mod1@example.com', status='m')
-        #mod1.set_password('modpw')
-        #mod1.save()
+
         # A normal user
         user1 = User.objects.create_user(username='user1', email='user1@example.com', password='123')
 

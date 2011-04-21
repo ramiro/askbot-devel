@@ -9,6 +9,7 @@ from mptt.templatetags.mptt_tags import cache_tree_children
 #from django.db import IntegrityError
 from django.core import exceptions
 from django.core.urlresolvers import reverse
+from django.utils.html import escape
 from django.http import (Http404, HttpResponse, HttpResponseRedirect,
         HttpResponseForbidden, HttpResponseNotAllowed)
 from django.utils import simplejson
@@ -50,7 +51,7 @@ def _recurse_tree(node):
     Helper recursive function for generate_tree().
     Traverses recursively the node tree.
     """
-    output = {'name': node.name, 'id': (node.tree_id, node.lft)}
+    output = {'name': escape(node.name), 'id': (node.tree_id, node.lft)}
     children = []
     if not node.is_leaf_node():
         for child in node.get_children():
@@ -120,9 +121,7 @@ def add_category(request):
     # TODO: there is a chance of a race condition here
     if parent:
         try:
-            parent = Category.objects.get(
-                    id=parent
-                )
+            parent = Category.objects.get(id=parent)
         except Category.DoesNotExist:
             raise exceptions.ValidationError(
                 _("Requested parent category doesn't exist")
@@ -263,7 +262,10 @@ def get_tag_categories(request):
                     raise exceptions.ValidationError(
                         _("Requested tag doesn't exist")
                         )
-                response_data['cats'] = list(tag.categories.values('id', 'name'))
+                # Make sure to HTML escape the category name to avoid introducin a XSS vector
+                response_data['cats'] = [
+                    {'id': v['id'], 'name': escape(v['name'])} for v in tag.categories.values('id', 'name')
+                ]
                 response_data['status'] = 'success'
                 data = simplejson.dumps(response_data)
                 return HttpResponse(data, mimetype="application/json")
@@ -421,7 +423,7 @@ def delete_category(request):
 
 def get_categories(request):
     """
-    Client-side autocomplete helper view.
+    Helper view fro client-side autocomplete code.
     Get a listing of all categories. Meant to be called using ajax and GET HTTP
     method. Available to the admin user only.
     JSON request: N/A
@@ -447,5 +449,6 @@ def get_categories(request):
     response = HttpResponse(mimetype="text/plain")
     vqs = Category.objects.order_by('name').values('name', 'id')
     for vdict in vqs:
+        vdict['name'] = escape(vdict['name'])
         response.write('%(name)s|%(id)d\n' % vdict)
     return response
