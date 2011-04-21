@@ -123,7 +123,7 @@ class ViewsTests(AjaxTests):
         # Setup a small category tree
         self.root = Category.objects.create(name=u'Root')
         self.c1 = Category.objects.create(name=u'Child1', parent=self.root)
-        Category.objects.create(name=u'Child2', parent=self.c1)
+        self.c2 = Category.objects.create(name=u'Child2', parent=self.c1)
         c3 = Category.objects.create(name=u'Child3', parent=self.root)
 
         self.tag1 = Tag.objects.create(name=u'Tag1', created_by=self.owner)
@@ -133,6 +133,7 @@ class ViewsTests(AjaxTests):
         self.tag3.categories.add(c3)
 
         askbot_settings.update('ENABLE_CATEGORIES', True)
+        askbot_settings.update('CATEGORIES_MAX_TREE_DEPTH', 3)
 
     def test_categories_off(self):
         """AJAX category-related views shouldn't be published when master switch is off."""
@@ -162,16 +163,23 @@ class ViewsTests(AjaxTests):
     def test_add_category_exists(self):
         """Two categories with the same name shouldn't be allowed."""
         self.client.login(username='owner', password='secret')
-        # A new category when other with the same name exists at the same level
+        # A new category when another with the same name exists at the same level
         r = self.ajax_post_json(reverse('add_category'), {'name': u'Child1', 'parent': self.root.id})
         data = self.assertAjaxFailure(r)
         self.assertTrue('There is already a category with that name' in data['message'])
 
         # A new category when other with the same name exists at another level
-        obj = Category.objects.get(name=u'Child2')
+        obj = Category.objects.get(name=u'Child3')
         r = self.ajax_post_json(reverse('add_category'), {'name': u'Child1', 'parent': obj.id})
         data = self.assertAjaxFailure(r)
         self.assertTrue('There is already a category with that name' in data['message'])
+
+    def test_too_deep_tree_level(self):
+        """Validation of new category depth level in the tree against the CATEGORIES_MAX_TREE_DEPTH livesetting."""
+        self.client.login(username='owner', password='secret')
+        r = self.ajax_post_json(reverse('add_category'), {'name': u'ImTooDeep', 'parent': self.c2.id})
+        data = self.assertAjaxFailure(r)
+        self.assertTrue('Invalid category nesting depth level' in data['message'])
 
     def add_category_success(self, post_data):
         """Helper method"""

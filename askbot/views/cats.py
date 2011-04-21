@@ -103,6 +103,7 @@ def add_category(request):
     The expected json request is an object with the following keys:
       'name': Name of the new category to be created.
       'parent': ID of the parent category for the category to be created.
+        if the provided values is None, then a new tree root is created.
     The response is also a json object with keys:
       'status': Can be either 'success' or 'error'
       'message': Text description in case of failure (not always present)
@@ -126,6 +127,10 @@ def add_category(request):
             raise exceptions.ValidationError(
                 _("Requested parent category doesn't exist")
                 )
+    # tree levels values as per django-mptt are zero based
+    if parent is not None and parent.level >= askbot_settings.CATEGORIES_MAX_TREE_DEPTH - 1:
+        raise ValueError(_('Invalid category nesting depth level'))
+
     cat, created = Category.objects.get_or_create(name=new_name, defaults={'parent': parent})
     if not created:
         raise exceptions.ValidationError(
