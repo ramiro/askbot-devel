@@ -29,7 +29,7 @@ if CMAJOR == 0 and CMINOR == 3 and CMICRO < 4:
 class PageLoadTestCase(TestCase):
     def try_url(
             self,
-            url_name, status_code=200, template=None, 
+            url_name, status_code=200, template=None,
             kwargs={}, redirect_url=None, follow=False,
             data = {},
         ):
@@ -77,72 +77,84 @@ class PageLoadTests(PageLoadTestCase):
         self.try_url('logout', template='logout.html')
         self.try_url('user_signin', template='authopenid/signin.html')
         #todo: test different tabs
-        self.try_url('tags', template='tags.html')
-        self.try_url('tags', data={'sort':'name'}, template='tags.html')
-        self.try_url('tags', data={'sort':'used'}, template='tags.html')
+        self.try_url('tags', kwargs={'category_name': ''}, template='tags.html')
+        self.try_url('tags', kwargs={'category_name': ''}, data={'sort':'name'}, template='tags.html')
+        self.try_url('tags', kwargs={'category_name': ''}, data={'sort':'used'}, template='tags.html')
         self.try_url('badges', template='badges.html')
         self.try_url(
-                'answer_revisions', 
+                'answer_revisions',
                 template='revisions.html',
                 kwargs={'id':38}
             )
         #todo: test different sort methods and scopes
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 template='main_page.html'
             )
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 data={'start_over':'true'},
                 template='main_page.html'
             )
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 data={'scope':'unanswered'},
                 template='main_page.html'
             )
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 data={'scope':'favorite'},
                 template='main_page.html'
             )
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 data={'scope':'unanswered', 'sort':'age-desc'},
                 template='main_page.html'
             )
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 data={'scope':'unanswered', 'sort':'age-asc'},
                 template='main_page.html'
             )
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 data={'scope':'unanswered', 'sort':'activity-desc'},
                 template='main_page.html'
             )
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 data={'scope':'unanswered', 'sort':'activity-asc'},
                 template='main_page.html'
             )
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 data={'sort':'answers-desc'},
                 template='main_page.html'
             )
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 data={'sort':'answers-asc'},
                 template='main_page.html'
             )
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 data={'sort':'votes-desc'},
                 template='main_page.html'
             )
         self.try_url(
                 'questions',
+                kwargs={'category_name': ''},
                 data={'sort':'votes-asc'},
                 template='main_page.html'
             )
@@ -256,47 +268,47 @@ class PageLoadTests(PageLoadTestCase):
         user = models.User.objects.get(id=2)
         name_slug = slugify(user.username)
         self.try_url(
-            'user_profile', 
+            'user_profile',
             kwargs={'id': 2, 'slug': name_slug},
-            data={'sort':'stats'}, 
+            data={'sort':'stats'},
             template='user_profile/user_stats.html'
         )
         self.try_url(
-            'user_profile', 
+            'user_profile',
             kwargs={'id': 2, 'slug': name_slug},
-            data={'sort':'recent'}, 
+            data={'sort':'recent'},
             template='user_profile/user_recent.html'
         )
         self.try_url(
-            'user_profile', 
+            'user_profile',
             kwargs={'id': 2, 'slug': name_slug},
-            data={'sort':'inbox'}, 
+            data={'sort':'inbox'},
             status_code=404,
             template='404.html'
         )
         self.try_url(
-            'user_profile', 
+            'user_profile',
             kwargs={'id': 2, 'slug': name_slug},
-            data={'sort':'reputation'}, 
+            data={'sort':'reputation'},
             template='user_profile/user_reputation.html'
         )
         self.try_url(
-            'user_profile', 
+            'user_profile',
             kwargs={'id': 2, 'slug': name_slug},
-            data={'sort':'votes'}, 
+            data={'sort':'votes'},
             status_code=404,
             template='404.html'
         )
         self.try_url(
-            'user_profile', 
+            'user_profile',
             kwargs={'id': 2, 'slug': name_slug},
-            data={'sort':'favorites'}, 
+            data={'sort':'favorites'},
             template='user_profile/user_favorites.html'
         )
         self.try_url(
-            'user_profile', 
+            'user_profile',
             kwargs={'id': 2, 'slug': name_slug},
-            data={'sort':'email_subscriptions'}, 
+            data={'sort':'email_subscriptions'},
             status_code=404,
             template='404.html'
         )

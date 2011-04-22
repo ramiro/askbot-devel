@@ -138,10 +138,11 @@ class ViewsTests(AjaxTests):
     def test_categories_off(self):
         """AJAX category-related views shouldn't be published when master switch is off."""
         askbot_settings.update('ENABLE_CATEGORIES', False)
-        r = self.ajax_post_json(reverse('add_category'), {'name': u'Entertainment', 'parent': (1, 1)})
+        r = self.ajax_post_json(reverse('add_category'), {'name': u'Entertainment', 'parent': self.root.id})
+        #print type(r), r.status_code, r.content
         self.assertEqual(r.status_code, 404)
         askbot_settings.update('ENABLE_CATEGORIES', True)
-        r = self.ajax_post_json(reverse('add_category'), {'name': u'Family', 'parent': (1, 1)})
+        r = self.ajax_post_json(reverse('add_category'), {'name': u'Family', 'parent': self.root.id})
         self.assertEqual(r.status_code, 200)
 
     # `add_category` view tests

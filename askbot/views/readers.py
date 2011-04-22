@@ -392,7 +392,7 @@ def tags(request, category_name):#view showing a listing of available tags - pla
         'has_next': tags.has_next(),
         'previous': tags.previous_page_number(),
         'next': tags.next_page_number(),
-        'base_url' : reverse('tags', category_name) + '?sort=%s&amp;' % sortby
+        'base_url' : reverse('tags', kwargs={'category_name': category_name}) + '?sort=%s&amp;' % sortby
     }
     paginator_context = extra_tags.cnprog_paginator(paginator_data)
     data = {
