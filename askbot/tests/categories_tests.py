@@ -560,7 +560,7 @@ class ViewsTests(AjaxTests):
         )
 
 
-class QuestionFilteringTests(TestCase):
+class BaseFilteringTests(TestCase):
     def setUp(self):
         # An administrator user
         owner = User.objects.create_user(username='owner', email='owner@example.com', password='secret')
@@ -582,20 +582,22 @@ class QuestionFilteringTests(TestCase):
         # category3         <=*====*=> tag3 <=*==*===> question q3
         #                                          \=> question q4
         #
+        # category11        <=*====*=> tag4
+        #
         # category4         <=*==*===> tag5 <===*==*=> question q5
         #                          \=> tag6 <=/
         #
         # category5         <===*==*=> tag7 <=*====*=> question q6
         # category6         <=/
         #
-        # category7         <=*==*===> tag8 <===*==*=> question q7
-        #                          \=> tag9 <===*==*=> question q8
+        # category7         <=*==*===> tag8 <=*?===*=> question q7
+        #                          \=> tag9 <=*====*=> question q8
         #
         # category8
         #
-        # category9         <=*====*=> tag10 <=*====*=> question q9
+        # category9         <=*====*=> tagA <=*====*=> question q9
         #    |
-        #    `-- category10 <=*====*=> tag11 <=*====*=> question qA
+        #    `-- category10 <=*====*=> tagB <=*====*=> question qA
         #
         root = Category.objects.create(name=u'Everything')
         c1 = Category.objects.create(name=u'category1', parent=root)
@@ -608,6 +610,7 @@ class QuestionFilteringTests(TestCase):
         c8 = Category.objects.create(name=u'category8', parent=root)
         c9 = Category.objects.create(name=u'category9', parent=root)
         c10 = Category.objects.create(name=u'category10', parent=c9)
+        c11 = Category.objects.create(name=u'category11', parent=c9)
 
         tag1 = Tag.objects.create(name=u'tag1', created_by=owner)
         tag2 = Tag.objects.create(name=u'tag2', created_by=owner)
@@ -615,6 +618,7 @@ class QuestionFilteringTests(TestCase):
         tag3 = Tag.objects.create(name=u'tag3', created_by=owner)
         tag3.categories.add(c3)
         tag4 = Tag.objects.create(name=u'tag4', created_by=owner)
+        tag4.categories.add(c11)
         # TODO: Why doesn't ``c4.tags.add(tag5, tag6)`` work?
         tag5 = Tag.objects.create(name=u'tag5', created_by=owner)
         tag5.categories.add(c4)
@@ -626,32 +630,40 @@ class QuestionFilteringTests(TestCase):
         tag8.categories.add(c7)
         tag9 = Tag.objects.create(name=u'tag9', created_by=owner)
         tag9.categories.add(c7)
-        tag10 = Tag.objects.create(name=u'tag10', created_by=owner)
-        tag10.categories.add(c9)
-        tag11 = Tag.objects.create(name=u'tag11', created_by=owner)
-        tag11.categories.add(c10)
+        tagA = Tag.objects.create(name=u'tagA', created_by=owner)
+        tagA.categories.add(c9)
+        tagB = Tag.objects.create(name=u'tagB', created_by=owner)
+        tagB.categories.add(c10)
 
+        # Make sure you use Question.update_tags() when tagging questions so
+        # the denormalized internal 'used count' of Tags gets corectly updated
         q1 = Question.objects.create(title=u'Question #1', author=user1, last_activity_by=user1)
-        q1.tags.add(tag1)
+        q1.update_tags(u"tag1", user=user1)
         q2 = Question.objects.create(title=u'Question #2', author=user1, last_activity_by=user1)
-        q2.tags.add(tag1)
+        q2.update_tags(u"tag2", user=user1)
         q3 = Question.objects.create(title=u'Question #3', author=user1, last_activity_by=user1)
         q4 = Question.objects.create(title=u'Question #4', author=user1, last_activity_by=user1)
-        tag3.questions.add(q3, q4)
+        q3.update_tags(u"tag3", user=user1)
+        q4.update_tags(u"tag3", user=user1)
         q5 = Question.objects.create(title=u'Question #5', author=user1, last_activity_by=user1)
-        q5.tags.add(tag5, tag6)
+        q5.update_tags(u"tag5 tag6", user=user1)
         q6 = Question.objects.create(title=u'Question #6', author=user1, last_activity_by=user1)
-        q6.tags.add(tag7)
+        q6.update_tags(u"tag7", user=user1)
         q7 = Question.objects.create(title=u'Question #7', author=user1, last_activity_by=user1)
-        q7.tags.add(tag8)
+        q7.update_tags(u"tag8", user=user1)
         q8 = Question.objects.create(title=u'Question #8', author=user1, last_activity_by=user1)
-        q8.tags.add(tag9)
+        q8.update_tags(u"tag9", user=user1)
         q9 = Question.objects.create(title=u'Question #9', author=user1, last_activity_by=user1)
-        q9.tags.add(tag10)
+        q9.update_tags(u"tagA", user=user1)
         qA = Question.objects.create(title=u'Question #A', author=user1, last_activity_by=user1)
-        qA.tags.add(tag11)
+        qA.update_tags(u"tagB", user=user1)
 
         askbot_settings.update('ENABLE_CATEGORIES', True)
+
+
+class QuestionFilteringTests(BaseFilteringTests):
+    def setUp(self):
+        super(QuestionFilteringTests, self).setUp()
 
     def test_root_url_redirect_success(self):
         """Home page should redirect to the questions page without errors"""
@@ -669,7 +681,7 @@ class QuestionFilteringTests(TestCase):
         self.assertEqual(200, r.status_code)
 
     def test_categories_feature_off(self):
-        """Categories filtering shouldn't work when categories features is turned off"""
+        """Filtering shouldn't work when categories features is turned off"""
         # Master categories switch -> off
         askbot_settings.update('ENABLE_CATEGORIES', False)
         r = self.client.get('/%scategory1' % _('questions/'))
@@ -694,8 +706,8 @@ class QuestionFilteringTests(TestCase):
 
     def test_filter_empty_category(self):
         """Question filtering by an empty category"""
-        # Empty categories
-        for cat in (2, 8):
+        # Categories with no associated questions
+        for cat in (2, 8, 11):
             r = self.client.get('/%scategory%d' % (_('questions/'), cat))
             self.assertEqual(200, r.status_code)
             for q in Question.objects.all():
@@ -705,7 +717,7 @@ class QuestionFilteringTests(TestCase):
         """Filter several questions associated to a category via one tag."""
         r = self.client.get('/%scategory3' % _('questions/'))
         self.assertEqual(200, r.status_code)
-        for q in Question.objects.exclude(title=u"Question #3").exclude(title=u"Question #4"):
+        for q in Question.objects.exclude(title__in=[u"Question #3", u"Question #4"]):
             self.assertNotContains(r, q.title)
         self.assertContains(r, u"Question #3")
         self.assertContains(r, u"Question #4")
@@ -732,8 +744,8 @@ class QuestionFilteringTests(TestCase):
         r = self.client.get('/%scategory9' % _('questions/'))
         self.assertEqual(200, r.status_code)
         for q in Question.objects.exclude(
-                title=u"Question #9"
-            ).exclude(title=u"Question #A"):
+                title__in=[u"Question #9",u"Question #A"]
+        ):
             self.assertNotContains(r, q.title)
         self.assertContains(r, u"Question #9")
         self.assertContains(r, u"Question #A")
@@ -753,4 +765,99 @@ class QuestionFilteringTests(TestCase):
         for q in Question.objects.exclude(title=u"Question #5"):
             self.assertNotContains(r, q.title)
         self.assertEqual(r.content.count(u"Question #5"), 1)
-        #self.assertContains(r, u"Question #5")
+
+
+class TagFilteringTests(BaseFilteringTests):
+    def setUp(self):
+        super(TagFilteringTests, self).setUp()
+
+    def test_no_category_simple_success(self):
+        """Tags page should work without errors when no category is specified"""
+        r = self.client.get('/%s' % _('tags/'))
+        self.assertEqual(200, r.status_code)
+
+        # Same thing when master categories switch is off
+        askbot_settings.update('ENABLE_CATEGORIES', False)
+        r = self.client.get('/%s' % _('tags/'))
+        self.assertEqual(200, r.status_code)
+
+    def test_categories_feature_off(self):
+        """Filtering shouldn't work when categories features is turned off"""
+        # Master categories switch -> off
+        askbot_settings.update('ENABLE_CATEGORIES', False)
+        r = self.client.get('/%scategory1' % _('tags/'))
+        self.assertEqual(404, r.status_code)
+
+    def test_categories_success(self):
+        """Basic tag filtering by category works"""
+        # Category exists
+        r = self.client.get('/%scategory2' % _('tags/'))
+        self.assertEqual(200, r.status_code)
+
+        # Category doesn't exist
+        r = self.client.get('/%sIDontExist' % _('tags/'))
+        self.assertEqual(404, r.status_code)
+
+    def test_no_filtering(self):
+        """All tags should be shown when no category filtering is in effect"""
+        r = self.client.get('/%s' % _('tags/'))
+        self.assertEqual(200, r.status_code)
+        # We need to skip tag4 because it has no associated question, its
+        # used_count is zero and doen't appear in the tag listing page
+        #for t in Tag.objects.exclude(name=u"tag4"):
+        for t in Tag.objects.exclude(used_count=0):
+            self.assertContains(r, t.name)
+
+    def test_filter_empty_category(self):
+        """Tag filtering by an empty category"""
+        # Categories with no associated tags
+        for cat in (2, 8):
+            r = self.client.get('/%scategory%d' % (_('questions/'), cat))
+            self.assertEqual(200, r.status_code)
+            for t in Tag.objects.all():
+                self.assertNotContains(r, t.name)
+
+    def test_filter_1tag(self):
+        """One tag associated woth one category."""
+        r = self.client.get('/%scategory3' % _('questions/'))
+        self.assertEqual(200, r.status_code)
+        for t in Tag.objects.exclude(used_count=0).exclude(name=u"tag3"):
+            self.assertNotContains(r, t.name)
+        self.assertContains(r, u"tag3")
+
+    def test_filter_manytags(self):
+        """Multiple tags associated to one category."""
+        r = self.client.get('/%scategory4' % _('questions/'))
+        self.assertEqual(200, r.status_code)
+        for t in Tag.objects.exclude(used_count=0).exclude(name__in=[u"tag5", u"tag6"]):
+            self.assertNotContains(r, t.name)
+        self.assertContains(r, u"tag5")
+        self.assertContains(r, u"tag6")
+
+    def test_filter_manycats_1tag(self):
+        """Tag associated to multiple categories. Filter by each of the categories"""
+        for cat in (5, 6):
+            r = self.client.get('/%scategory%d' % (_('questions/'), cat))
+            self.assertEqual(200, r.status_code)
+            for t in Tag.objects.exclude(used_count=0).exclude(name=u"tag7"):
+                self.assertNotContains(r, t.name)
+            self.assertContains(r, u"tag7")
+
+    def test_filter_categories_subtree(self):
+        """Selection of tags associated to sub-categories of a given category."""
+        r = self.client.get('/%scategory9' % _('questions/'))
+        self.assertEqual(200, r.status_code)
+        for t in Tag.objects.exclude(used_count=0).exclude(
+                name__in=[u"tagA", u"tagB"]
+                ):
+            self.assertNotContains(r, t.name)
+        self.assertContains(r, u"tagA")
+        self.assertContains(r, u"tagB")
+
+        # filtering by the sub-category should show only tags associated with
+        # it:
+        r = self.client.get('/%scategory10' % _('questions/'))
+        self.assertEqual(200, r.status_code)
+        for t in Tag.objects.exclude(used_count=0).exclude(name=u"tagB"):
+            self.assertNotContains(r, t.name)
+        self.assertContains(r, u"tagB")
