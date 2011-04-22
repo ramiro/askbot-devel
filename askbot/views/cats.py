@@ -20,6 +20,29 @@ from askbot.models import Tag
 from askbot.skins.loaders import render_into_skin
 from askbot.utils.tokens import CategoriesApiTokenGenerator
 
+# NOTES
+#
+# * Can the `django-categories` app be dropped? All the API calls we are using
+#   are from the `django-mptt` app. The only valuable thing `django-categories`
+#   could provide is the fancy widget to edit the tree in the admin. But that
+#   is only available when one installs its poorly named helper `'editor'` app
+#   that isn't well documented nor integrated (e.g.hoops should be performed to
+#   get it to server its static content). Perhaps we could simply have our own
+#   Category model that inherits from `MPTTModel` and so avoid having to use
+#   the `django-categories`  register hook for `Tag`<->`categories.Category`
+#   that gave us some problems with the South migrations.
+#
+# * Code for some of the ajax API backend views (they are marked so with
+#   comments) has a time window where race conditions are possible: Between the
+#   point where e.g. the existence of a model instance is queried for and the
+#   point where that objects is used later. We could try to simply skip the
+#   first step and see if Django ORM generates an exception in the second step
+#   that we can use to report the error. Maybe the
+#   `@transaction.commit_on_success` Django decorator can be of help here?
+#
+# * Maybe we can change usage of Django's `ValidationError`'s with Python's
+#   `ValueError` in AJAX API views?
+#
 
 def cats(request):
     """
