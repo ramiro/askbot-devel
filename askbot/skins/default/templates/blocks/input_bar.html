@@ -4,7 +4,7 @@
     {# url action depends on which tab is active #}
     <form
         {% if active_tab == "tags" %}
-            action="{% url tags %}"
+            action="{% url tags current_category %}"
         {% elif active_tab == "users" %}
             action="{% url users %}"
         {% else %}

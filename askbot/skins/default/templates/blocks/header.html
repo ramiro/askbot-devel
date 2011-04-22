@@ -17,7 +17,7 @@
             >{% trans %}questions{% endtrans %}</a>
             <a
                 id="nav_tags"
-                href="{% url tags %}"
+                href="{% url tags current_category %}"
                 {% if active_tab == 'tags' %}class="on"{% endif %}
             >{% trans %}tags{% endtrans %}</a>
             <a

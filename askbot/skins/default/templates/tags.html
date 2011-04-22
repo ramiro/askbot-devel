@@ -9,13 +9,13 @@
     <div class="tabsA">
         <a
             id="sort_name"
-            href="{% url tags %}?sort=name"
+            href="{% url tags current_category %}?sort=name"
             {% if tab_id == 'name' %}class="on"{% endif %}
             title="{% trans %}sorted alphabetically{% endtrans %}"
         ><span>{% trans %}by name{% endtrans %}</span></a>
         <a
             id="sort_used"
-            href="{% url tags %}?sort=used"
+            href="{% url tags current_category %}?sort=used"
             {% if tab_id == 'used' %}class="on"{% endif %}
             title="{% trans %}sorted by frequency of tag use{% endtrans %}"
         ><span>{% trans %}by popularity{% endtrans %}</span></a>

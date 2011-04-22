@@ -10,7 +10,7 @@
         <ul>
             <li><a href="#" id="linkPrevious">{% trans %}back to previous page{% endtrans %}</li>
             <li><a href="{% url questions current_category %}">{% trans %}see latest questions{% endtrans %}</a></li>
-            <li><a href="{% url tags %}">{% trans %}see tags{% endtrans %}</a></li>
+            <li><a href="{% url tags current_category %}">{% trans %}see tags{% endtrans %}</a></li>
         </u>
     </div>
 </div>
