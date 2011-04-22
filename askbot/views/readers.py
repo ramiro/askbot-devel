@@ -9,6 +9,7 @@ allow adding new comments via Ajax form post.
 import datetime
 import logging
 import urllib
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.core.paginator import Paginator, EmptyPage, InvalidPage
@@ -316,7 +317,7 @@ def questions(request, category_name):
     #print after - before
     return response
 
-def tags(request):#view showing a listing of available tags - plain list
+def tags(request, category_name):#view showing a listing of available tags - plain list
     stag = ""
     is_paginated = True
     sortby = request.GET.get('sort', 'used')
@@ -326,22 +327,57 @@ def tags(request):#view showing a listing of available tags - plain list
         page = 1
 
     if request.method == "GET":
-        stag = request.GET.get("query", "").strip()
-        if stag != '':
-            objects_list = Paginator(
-                            models.Tag.objects.filter(
-                                                deleted=False,
-                                                name__icontains=stag
-                                            ).exclude(
-                                                used_count=0
-                                            ),
-                            DEFAULT_PAGE_SIZE
-                        )
-        else:
-            if sortby == "name":
-                objects_list = Paginator(models.Tag.objects.all().filter(deleted=False).exclude(used_count=0).order_by("name"), DEFAULT_PAGE_SIZE)
+        # have to import this at run time, otherwise there is a circular import
+        # dependency...
+        from askbot.conf import settings as askbot_settings
+        if category_name:
+            if askbot.conf.settings.ENABLE_CATEGORIES:
+                try:
+                    category = Category.objects.get(name=category_name)
+                except Category.DoesNotExist:
+                    raise Http404
             else:
-                objects_list = Paginator(models.Tag.objects.all().filter(deleted=False).exclude(used_count=0).order_by("-used_count"), DEFAULT_PAGE_SIZE)
+                # Maybe we can redirect to the bare /questions/ URL instead
+                raise Http404
+        else:
+            category = None
+
+        stag = request.GET.get("query", "").strip()
+        filter_spec = Q(deleted=False)
+        sort_spec = None
+        if stag:
+            filter_spec &= Q(name__icontains=stag)
+        elif sortby == "name":
+            sort_spec = "name"
+        else:
+            sort_spec = "-used_count"
+        if category and askbot_settings.ENABLE_CATEGORIES:
+            # Filter out tags not associated with the requested category
+            cat_pks = category.get_descendants(include_self=True).values_list(
+                    'pk', flat=True)
+            filter_spec &= Q(categories__in=list(cat_pks))
+        paginator_query = models.Tag.objects.filter(filter_spec).exclude(used_count=0)
+        if sort_spec is not None:
+            paginator_query = paginator_query.order_by(sort_spec)
+        objects_list = Paginator(
+            paginator_query,
+            DEFAULT_PAGE_SIZE
+        )
+        #if stag != '':
+        #    objects_list = Paginator(
+        #                    models.Tag.objects.filter(
+        #                                        deleted=False,
+        #                                        name__icontains=stag
+        #                                    ).exclude(
+        #                                        used_count=0
+        #                                    ),
+        #                    DEFAULT_PAGE_SIZE
+        #                )
+        #else:
+        #    if sortby == "name":
+        #        objects_list = Paginator(models.Tag.objects.filter(deleted=False).exclude(used_count=0).order_by("name"), DEFAULT_PAGE_SIZE)
+        #    else:
+        #        objects_list = Paginator(models.Tag.objects.filter(deleted=False).exclude(used_count=0).order_by("-used_count"), DEFAULT_PAGE_SIZE)
 
     try:
         tags = objects_list.page(page)
@@ -366,7 +402,8 @@ def tags(request):#view showing a listing of available tags - plain list
         'stag' : stag,
         'tab_id' : sortby,
         'keywords' : stag,
-        'paginator_context' : paginator_context
+        'paginator_context' : paginator_context,
+        'current_category': category_name,
     }
     return render_into_skin('tags.html', data, request)
 

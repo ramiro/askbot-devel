@@ -134,7 +134,7 @@ urlpatterns = patterns('',
         name='question'
     ),
     url(
-        r'^%s$' % _('tags/'),
+        r'^%s(?P<category_name>.*)$' % _('tags/'),
         views.readers.tags,
         name='tags'
     ),
