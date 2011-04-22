@@ -744,3 +744,12 @@ class QuestionFilteringTests(TestCase):
         for q in Question.objects.exclude(title=u"Question #A"):
             self.assertNotContains(r, q.title)
         self.assertContains(r, u"Question #A")
+
+    def test_filter_categories_unique(self):
+        """Question associated to a category via multiple paths gets listed once."""
+        r = self.client.get('/%scategory4' % _('questions/'))
+        self.assertEqual(200, r.status_code)
+        for q in Question.objects.exclude(title=u"Question #5"):
+            self.assertNotContains(r, q.title)
+        self.assertEqual(r.content.count(u"Question #5"), 1)
+        #self.assertContains(r, u"Question #5")
