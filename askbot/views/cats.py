@@ -74,7 +74,7 @@ def _recurse_tree(node):
     Helper recursive function for generate_tree().
     Traverses recursively the node tree.
     """
-    output = {'name': escape(node.name), 'id': (node.tree_id, node.lft)}
+    output = {'name': node.name, 'id': node.id}
     children = []
     if not node.is_leaf_node():
         for child in node.get_children():

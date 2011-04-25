@@ -67,42 +67,42 @@ urlpatterns = patterns('',
         name = 'api_get_questions'
     ),
     url(
-        r'^%s%s$' % (_('questions/'), _('ask/')),
+        r'^%s$' % (_('ask/')),
         views.writers.ask,
         name='ask'
     ),
     url(
-        r'^%s(?P<id>\d+)/%s$' % (_('questions/'), _('edit/')),
+        r'^%s(?P<id>\d+)/%s$' % (_('question/'), _('edit/')),
         views.writers.edit_question,
         name='edit_question'
     ),
     url(#this url is both regular and ajax
-        r'^%s(?P<id>\d+)/%s$' % (_('questions/'), _('retag/')),
+        r'^%s(?P<id>\d+)/%s$' % (_('question/'), _('retag/')),
         views.writers.retag_question,
         name='retag_question'
     ),
     url(
-        r'^%s(?P<id>\d+)/%s$' % (_('questions/'), _('close/')),
+        r'^%s(?P<id>\d+)/%s$' % (_('question/'), _('close/')),
         views.commands.close,
         name='close'
     ),
     url(
-        r'^%s(?P<id>\d+)/%s$' % (_('questions/'), _('reopen/')),
+        r'^%s(?P<id>\d+)/%s$' % (_('question/'), _('reopen/')),
         views.commands.reopen,
         name='reopen'
     ),
     url(
-        r'^%s(?P<id>\d+)/%s$' % (_('questions/'), _('answer/')),
+        r'^%s(?P<id>\d+)/%s$' % (_('question/'), _('answer/')),
         views.writers.answer,
         name='answer'
     ),
     url(#ajax only
-        r'^%s(?P<id>\d+)/%s$' % (_('questions/'), _('vote/')),
+        r'^%s(?P<id>\d+)/%s$' % (_('question/'), _('vote/')),
         views.commands.vote,
         name='vote'
     ),
     url(
-        r'^%s(?P<id>\d+)/%s$' % (_('questions/'), _('revisions/')),
+        r'^%s(?P<id>\d+)/%s$' % (_('question/'), _('revisions/')),
         views.readers.revisions,
         kwargs = {'object_name': 'Question'},
         name='question_revisions'

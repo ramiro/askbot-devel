@@ -55,18 +55,21 @@ var showMessage = function(element, msg, where) {
 var makeKeyHandler = function(key, callback){
     return function(e){
         if ((e.which && e.which == key) || (e.keyCode && e.keyCode == key)){
-            callback();
-            return false;
+            callback(e);
+            e.stopImmediatePropagation();
         }
     };
 };
 
 
 var setupButtonEventHandlers = function(button, callback){
-    button.keydown(makeKeyHandler(13, callback));
-    button.click(callback);
+    var wrapped_callback = function(e){
+        callback();
+        e.stopImmediatePropagation();
+    };
+    button.keydown(makeKeyHandler(13, wrapped_callback));
+    button.click(wrapped_callback);
 };
-
 
 var putCursorAtEnd = function(element){
     var el = element.get()[0];
@@ -382,6 +385,49 @@ if(!this.JSON){this.JSON={}}(function(){function f(n){return n<10?"0"+n:n}if(typ
 (function(){var a={getSelection:function(){var b=this.jquery?this[0]:this;return(("selectionStart" in b&&function(){var c=b.selectionEnd-b.selectionStart;return{start:b.selectionStart,end:b.selectionEnd,length:c,text:b.value.substr(b.selectionStart,c)}})||(document.selection&&function(){b.focus();var d=document.selection.createRange();if(d==null){return{start:0,end:b.value.length,length:0}}var c=b.createTextRange();var e=c.duplicate();c.moveToBookmark(d.getBookmark());e.setEndPoint("EndToStart",c);return{start:e.text.length,end:e.text.length+d.text.length,length:d.text.length,text:d.text}})||function(){return{start:0,end:b.value.length,length:0}})()},replaceSelection:function(){var b=this.jquery?this[0]:this;var c=arguments[0]||"";return(("selectionStart" in b&&function(){b.value=b.value.substr(0,b.selectionStart)+c+b.value.substr(b.selectionEnd,b.value.length);return this})||(document.selection&&function(){b.focus();document.selection.createRange().text=c;return this})||function(){b.value+=c;return this})()}};jQuery.each(a,function(b){jQuery.fn[b]=this})})();
 //our custom autocompleter
 var AutoCompleter=function(a){var b={autocompleteMultiple:true,multipleSeparator:" ",inputClass:"acInput",loadingClass:"acLoading",resultsClass:"acResults",selectClass:"acSelect",queryParamName:"q",limitParamName:"limit",extraParams:{},lineSeparator:"\n",cellSeparator:"|",minChars:2,maxItemsToShow:10,delay:400,useCache:true,maxCacheLength:10,matchSubset:true,matchCase:false,matchInside:true,mustMatch:false,preloadData:false,selectFirst:false,stopCharRegex:/\s+/,selectOnly:false,formatItem:null,onItemSelect:false,autoFill:false,filterResults:true,sortResults:true,sortFunction:false,onNoMatch:false};this.options=$.extend({},b,a);this.cacheData_={};this.cacheLength_=0;this.selectClass_="jquery-autocomplete-selected-item";this.keyTimeout_=null;this.lastKeyPressed_=null;this.lastProcessedValue_=null;this.lastSelectedValue_=null;this.active_=false;this.finishOnBlur_=true;this.options.minChars=parseInt(this.options.minChars,10);if(isNaN(this.options.minChars)||this.options.minChars<1){this.options.minChars=2}this.options.maxItemsToShow=parseInt(this.options.maxItemsToShow,10);if(isNaN(this.options.maxItemsToShow)||this.options.maxItemsToShow<1){this.options.maxItemsToShow=10}this.options.maxCacheLength=parseInt(this.options.maxCacheLength,10);if(isNaN(this.options.maxCacheLength)||this.options.maxCacheLength<1){this.options.maxCacheLength=10}if(this.options.preloadData===true){this.fetchRemoteData("",function(){})}};inherits(AutoCompleter,WrappedElement);AutoCompleter.prototype.decorate=function(a){this._element=a;this._element.attr("autocomplete","off");this._results=$("<div></div>").hide();if(this.options.resultsClass){this._results.addClass(this.options.resultsClass)}this._results.css({position:"absolute"});$("body").append(this._results);this.setEventHandlers()};AutoCompleter.prototype.setEventHandlers=function(){var a=this;a._element.keydown(function(b){a.lastKeyPressed_=b.keyCode;switch(a.lastKeyPressed_){case 38:b.preventDefault();if(a.active_){a.focusPrev()}else{a.activate()}return false;break;case 40:b.preventDefault();if(a.active_){a.focusNext()}else{a.activate()}return false;break;case 9:case 13:if(a.active_){b.preventDefault();a.selectCurrent();return false}break;case 27:if(a.active_){b.preventDefault();a.finish();return false}break;default:a.activate()}});a._element.blur(function(){if(a.finishOnBlur_){setTimeout(function(){a.finish()},200)}})};AutoCompleter.prototype.position=function(){var a=this._element.offset();this._results.css({top:a.top+this._element.outerHeight(),left:a.left})};AutoCompleter.prototype.cacheRead=function(d){var f,c,b,a,e;if(this.options.useCache){d=String(d);f=d.length;if(this.options.matchSubset){c=1}else{c=f}while(c<=f){if(this.options.matchInside){a=f-c}else{a=0}e=0;while(e<=a){b=d.substr(0,c);if(this.cacheData_[b]!==undefined){return this.cacheData_[b]}e++}c++}}return false};AutoCompleter.prototype.cacheWrite=function(a,b){if(this.options.useCache){if(this.cacheLength_>=this.options.maxCacheLength){this.cacheFlush()}a=String(a);if(this.cacheData_[a]!==undefined){this.cacheLength_++}return this.cacheData_[a]=b}return false};AutoCompleter.prototype.cacheFlush=function(){this.cacheData_={};this.cacheLength_=0};AutoCompleter.prototype.callHook=function(c,b){var a=this.options[c];if(a&&$.isFunction(a)){return a(b,this)}return false};AutoCompleter.prototype.activate=function(){var b=this;var a=function(){b.activateNow()};var c=parseInt(this.options.delay,10);if(isNaN(c)||c<=0){c=250}if(this.keyTimeout_){clearTimeout(this.keyTimeout_)}this.keyTimeout_=setTimeout(a,c)};AutoCompleter.prototype.activateNow=function(){var a=this.getValue();if(a!==this.lastProcessedValue_&&a!==this.lastSelectedValue_){if(a.length>=this.options.minChars){this.active_=true;this.lastProcessedValue_=a;this.fetchData(a)}}};AutoCompleter.prototype.fetchData=function(b){if(this.options.data){this.filterAndShowResults(this.options.data,b)}else{var a=this;this.fetchRemoteData(b,function(c){a.filterAndShowResults(c,b)})}};AutoCompleter.prototype.fetchRemoteData=function(c,e){var d=this.cacheRead(c);if(d){e(d)}else{var a=this;if(this._element){this._element.addClass(this.options.loadingClass)}var b=function(g){var f=false;if(g!==false){f=a.parseRemoteData(g);a.options.data=f;a.cacheWrite(c,f)}if(a._element){a._element.removeClass(a.options.loadingClass)}e(f)};$.ajax({url:this.makeUrl(c),success:b,error:function(){b(false)}})}};AutoCompleter.prototype.setOption=function(a,b){this.options[a]=b};AutoCompleter.prototype.setExtraParam=function(b,c){var a=$.trim(String(b));if(a){if(!this.options.extraParams){this.options.extraParams={}}if(this.options.extraParams[a]!==c){this.options.extraParams[a]=c;this.cacheFlush()}}};AutoCompleter.prototype.makeUrl=function(e){var a=this;var b=this.options.url;var d=$.extend({},this.options.extraParams);if(this.options.queryParamName===false){b+=encodeURIComponent(e)}else{d[this.options.queryParamName]=e}if(this.options.limitParamName&&this.options.maxItemsToShow){d[this.options.limitParamName]=this.options.maxItemsToShow}var c=[];$.each(d,function(f,g){c.push(a.makeUrlParam(f,g))});if(c.length){b+=b.indexOf("?")==-1?"?":"&";b+=c.join("&")}return b};AutoCompleter.prototype.makeUrlParam=function(a,b){return String(a)+"="+encodeURIComponent(b)};AutoCompleter.prototype.splitText=function(a){return String(a).replace(/(\r\n|\r|\n)/g,"\n").split(this.options.lineSeparator)};AutoCompleter.prototype.parseRemoteData=function(c){var h,b,f,d,g;var e=[];var b=this.splitText(c);for(f=0;f<b.length;f++){var a=b[f].split(this.options.cellSeparator);g=[];for(d=0;d<a.length;d++){g.push(unescape(a[d]))}h=g.shift();e.push({value:unescape(h),data:g})}return e};AutoCompleter.prototype.filterAndShowResults=function(a,b){this.showResults(this.filterResults(a,b),b)};AutoCompleter.prototype.filterResults=function(d,b){var f=[];var l,c,e,m,j,a;var k,h,g;for(e=0;e<d.length;e++){m=d[e];j=typeof m;if(j==="string"){l=m;c={}}else{if($.isArray(m)){l=m[0];c=m.slice(1)}else{if(j==="object"){l=m.value;c=m.data}}}l=String(l);if(l>""){if(typeof c!=="object"){c={}}if(this.options.filterResults){h=String(b);g=String(l);if(!this.options.matchCase){h=h.toLowerCase();g=g.toLowerCase()}a=g.indexOf(h);if(this.options.matchInside){a=a>-1}else{a=a===0}}else{a=true}if(a){f.push({value:l,data:c})}}}if(this.options.sortResults){f=this.sortResults(f,b)}if(this.options.maxItemsToShow>0&&this.options.maxItemsToShow<f.length){f.length=this.options.maxItemsToShow}return f};AutoCompleter.prototype.sortResults=function(c,d){var b=this;var a=this.options.sortFunction;if(!$.isFunction(a)){a=function(g,e,h){return b.sortValueAlpha(g,e,h)}}c.sort(function(f,e){return a(f,e,d)});return c};AutoCompleter.prototype.sortValueAlpha=function(d,c,e){d=String(d.value);c=String(c.value);if(!this.options.matchCase){d=d.toLowerCase();c=c.toLowerCase()}if(d>c){return 1}if(d<c){return -1}return 0};AutoCompleter.prototype.showResults=function(e,b){var k=this;var g=$("<ul></ul>");var f,l,j,a,h=false,d=false;var c=e.length;for(f=0;f<c;f++){l=e[f];j=$("<li>"+this.showResult(l.value,l.data)+"</li>");j.data("value",l.value);j.data("data",l.data);j.click(function(){var i=$(this);k.selectItem(i)}).mousedown(function(){k.finishOnBlur_=false}).mouseup(function(){k.finishOnBlur_=true});g.append(j);if(h===false){h=String(l.value);d=j;j.addClass(this.options.firstItemClass)}if(f==c-1){j.addClass(this.options.lastItemClass)}}this.position();this._results.html(g).show();a=this._results.outerWidth()-this._results.width();this._results.width(this._element.outerWidth()-a);$("li",this._results).hover(function(){k.focusItem(this)},function(){});if(this.autoFill(h,b)){this.focusItem(d)}};AutoCompleter.prototype.showResult=function(b,a){if($.isFunction(this.options.showResult)){return this.options.showResult(b,a)}else{return b}};AutoCompleter.prototype.autoFill=function(e,c){var b,a,d,f;if(this.options.autoFill&&this.lastKeyPressed_!=8){b=String(e).toLowerCase();a=String(c).toLowerCase();d=e.length;f=c.length;if(b.substr(0,f)===a){this._element.val(e);this.selectRange(f,d);return true}}return false};AutoCompleter.prototype.focusNext=function(){this.focusMove(+1)};AutoCompleter.prototype.focusPrev=function(){this.focusMove(-1)};AutoCompleter.prototype.focusMove=function(a){var b,c=$("li",this._results);a=parseInt(a,10);for(var b=0;b<c.length;b++){if($(c[b]).hasClass(this.selectClass_)){this.focusItem(b+a);return}}this.focusItem(0)};AutoCompleter.prototype.focusItem=function(b){var a,c=$("li",this._results);if(c.length){c.removeClass(this.selectClass_).removeClass(this.options.selectClass);if(typeof b==="number"){b=parseInt(b,10);if(b<0){b=0}else{if(b>=c.length){b=c.length-1}}a=$(c[b])}else{a=$(b)}if(a){a.addClass(this.selectClass_).addClass(this.options.selectClass)}}};AutoCompleter.prototype.selectCurrent=function(){var a=$("li."+this.selectClass_,this._results);if(a.length==1){this.selectItem(a)}else{this.finish()}};AutoCompleter.prototype.selectItem=function(d){var c=d.data("value");var b=d.data("data");var a=this.displayValue(c,b);this.lastProcessedValue_=a;this.lastSelectedValue_=a;this.setValue(a);this.setCaret(a.length);this.callHook("onItemSelect",{value:c,data:b});this.finish()};AutoCompleter.prototype.isContentChar=function(a){if(a.match(this.options.stopCharRegex)){return false}else{if(a===this.options.multipleSeparator){return false}else{return true}}};AutoCompleter.prototype.getValue=function(){var c=this._element.getSelection();var d=this._element.val();var f=c.start;var e=f;for(cpos=f;cpos>=0;cpos=cpos-1){if(cpos===d.length){continue}var b=d.charAt(cpos);if(!this.isContentChar(b)){break}e=cpos}var a=f;for(cpos=f;cpos<d.length;cpos=cpos+1){if(cpos===0){continue}var b=d.charAt(cpos);if(!this.isContentChar(b)){break}a=cpos}this._selection_start=e;this._selection_end=a;return d.substring(e,a)};AutoCompleter.prototype.setValue=function(b){var a=this._element.val().substring(0,this._selection_start);var c=this._element.val().substring(this._selection_end+1);this._element.val(a+b+c)};AutoCompleter.prototype.displayValue=function(b,a){if($.isFunction(this.options.displayValue)){return this.options.displayValue(b,a)}else{return b}};AutoCompleter.prototype.finish=function(){if(this.keyTimeout_){clearTimeout(this.keyTimeout_)}if(this._element.val()!==this.lastSelectedValue_){if(this.options.mustMatch){this._element.val("")}this.callHook("onNoMatch")}this._results.hide();this.lastKeyPressed_=null;this.lastProcessedValue_=null;if(this.active_){this.callHook("onFinish")}this.active_=false};AutoCompleter.prototype.selectRange=function(d,a){var c=this._element.get(0);if(c.setSelectionRange){c.focus();c.setSelectionRange(d,a)}else{if(this.createTextRange){var b=this.createTextRange();b.collapse(true);b.moveEnd("character",a);b.moveStart("character",d);b.select()}}};AutoCompleter.prototype.setCaret=function(a){this.selectRange(a,a)};
+
+/**
+ * sets transition event handler to the object
+ * and (optionally) - to all its children recursively
+ * @param {string} event_name - name of state transition event
+ * @param {Function} handler - function that will be called upon transition
+ * @param {boolean} recursive - if true - apply to children as well
+ * requirements are that ``this`` object has private property
+ * ``_state_transition_event_handlers``
+ * also - if ``recursive === true``, the ``this`` object must
+ * have property ``_children`` and all children must have method
+ * ``setStateTransitionEventHandler``, then the handlers will
+ * be copied onto the children
+ */
+function setStateTransitionEventHandler(event_name, handler, recursive){
+    this._state_transition_event_handlers[event_name] = handler;
+    if (recursive === true) {
+        $.each(this._children, function(idx, child){
+            child.setStateTransitionEventHandler(event_name, handler, recursive);
+        });
+    }
+};
+
+/**
+ * @param {Array.<Object>} objects
+ * @param {boolean} recursive
+ * just like ``setStateTransitionEventHandler``
+ * but copies all such handlers from ``this`` object to ``objects``
+ * the requirement on ``objects`` is that they all
+ * have method ``setStateTransitionEventHandler`` and
+ * ``this`` satisfies all the requirements of the previous function
+ * if ``recursive === true``, the copying is recurzively applied 
+ * to the ``_children`` of all objects
+ */
+function copyStateTransitionEventHandlersToObjects(objects, recursive){
+    for (event_name in this._state_transition_event_handlers){
+        var handler = this._state_transition_event_handlers[event_name];
+        $.each(objects, function(idx, obj){
+            obj.setStateTransitionEventHandler(event_name, handler, recursive);
+        });
+    }
+};
+
 /**
  * A text element with an "edit" prompt
  * showing on mouseover
@@ -394,10 +440,27 @@ var AutoCompleter=function(a){var b={autocompleteMultiple:true,multipleSeparator
  */
 var EditableString = function(){
     WrappedElement.call(this);
+    /**
+     * @private
+     * @type {string}
+     * text string that is to be shown 
+     * to the user
+     */
+    this._text = '';
+    /**
+     * @private
+     * @type {Object.<string, Function>}
+     */
+    this._state_transition_event_handlers = {};
 };
 inherits(EditableString, WrappedElement);
 
 EditableString.prototype.setState = function(state){
+    //run transition event handler, if exists
+    var handlers = this._state_transition_event_handlers;
+    if (handlers.hasOwnProperty(state)){
+        handlers[state].call();
+    }
     //hide and show things
     if (state == 'EDIT'){
         this._edit_block.show();
@@ -409,24 +472,41 @@ EditableString.prototype.setState = function(state){
 };
 
 /**
+ * @inheritDoc
+ * should always be called with ``recursive = false``
+ * or better - just with two parameters
+ */
+EditableString.prototype.setStateTransitionEventHandler = 
+    setStateTransitionEventHandler;
+
+/**
  * @param {string} text - string text
  */
 EditableString.prototype.setText = function(text){
-    this._text_element.html(text);
+    this._text = text;
+    if (this._text_element){
+        this._text_element.html(text);
+    };
 };
 
 /**
  * @return {string} text of the string
  */
 EditableString.prototype.getText = function(){
-    this._text_element.html();
+    if (this.inDocument()){
+        var text = this._text_element.html();
+        this._text = text;
+        return text;
+    } else {
+        return this._text;
+    }
 };
 
 EditableString.prototype.getSaveEditHandler = function(){
     var me = this;
     return function(){
         var raw_text = me._input_box.val();
-        me._text_element.html(escape(raw_text));
+        me.setText(raw_text);
         me.setState('DISPLAY');
     };
 };
@@ -449,10 +529,18 @@ EditableString.prototype.getStartEditHandler = function(){
  * and enters the DISPLAY state
  */
 EditableString.prototype.decorate = function(element){
-    this._element = element;
-    var text = element.html();
-    this._element.empty();
+    this.setText(element.html());//no error checking
     //build dom for the display block
+    var real_element = this.getElement();
+    this._element = element;
+    this._element.empty();
+    this._element.append(real_element);
+};
+
+EditableString.prototype.createDom = function(){
+
+    this._element = this.makeElement('dom');
+
     this._display_block = this.makeElement('div');
     this._element.append(this._display_block);
     this._edit_block = this.makeElement('div');
@@ -473,7 +561,7 @@ EditableString.prototype.decorate = function(element){
     //build dom for the edit block
 
     //set the value of text
-    this._text_element.html(text);
+    this._text_element.html(this.getText());
 
     //replace content with the new dom
 
@@ -487,25 +575,109 @@ EditableString.prototype.decorate = function(element){
     );
 };
 
-EditableString.prototype.createDom = function(){
-    var div = this.makeElement('dom');
-    this.decorate(div);
+/**
+ * Category widget
+ * @constructor
+ */
+var Category = function(node_data){
+    WrappedElement.call(this);
+    /** 
+     * Category id
+     * @type {integer}
+     */
+    this.id = node_data['id'];
+    /**
+     * Category name
+     * @type {string}
+     */
+    this.name = node_data['name'];
+    /**
+     * source data for the children
+     * @private
+     * @type {Object} 
+     */
+    this._children_data = node_data['children'];
+    /**
+     * subtree with child categories
+     * @private
+     * @type {CategoryTree}
+     */
+    this._subtree = null;
+    /**
+     * @private
+     * @type {Object.<string, Function>}
+     */
+    this._state_transition_event_handlers = {};
+
+};
+inherits(Category, WrappedElement);
+
+/** creates dom for a single category
+ * does not build subcategories
+ */
+Category.prototype.createDom = function(){
+    //create the text element for Category
+    this._element = this.makeElement('li');
+
+    var category_text = new EditableString();
+    category_text.setText(this.name);
+    this._text_subwidget = category_text;
+
+    var text_element = category_text.getElement();
+    this._element.append(text_element);
+    //todo: copy state transition event handlers to the EditableText
+
+    //add delete handler and button - if user has privilege to delete
 };
 
 /**
- * Category widget
- * @inherits EditableString
+ * Initializes subtrees and treir DOM's
  */
-var Category = function(){
+Category.prototype.buildSubtree = function(){
+    if (this._children_data.length > 0){
+        var subtree = new CategoryTree();
+        subtree.setData(this._children_data);
+        this._element.append(subtree.getElement());
+        this._subtree = subtree;
+        this.copyStateTransitionEventHandlersToObjects([subtree], true);
+    }
 };
-inherits(Category, EditableString);
 
-Category.prototype.addSubCategory = function(child){
+/**
+ * interface is the same as in ``setStateTransitionEventHandlers``
+ * but it sets the handler to ``Category``, ``EditableText`` element
+ * and the ``_subtree``
+ */
+Category.prototype.setStateTransitionEventHandler = function(event_name, handler){
+    setStateTransitionEventHandler.call(this, event_name, handler);
+    if (this._text_subwidget){
+        var tsw = this._text_subwidget;
+        tsw.setStateTransitionEventHandler(event_name, handler);
+    }
+    if (this._subtree){
+        //run this recursively
+        this._subtree.setStateTransitionEventHandler(event_name, handler, true);
+    }
 };
+
+/**
+ * @inheritDoc
+ */
+Category.prototype.copyStateTransitionEventHandlersToObjects =
+    copyStateTransitionEventHandlersToObjects;
 
 var CategoryTree = function(){
     WrappedElement.call(this);
-    this._handler = null;
+    /**
+     * @private
+     * @type {Object.<string, Function>}
+     * "dictionary" of transition state event handlers
+     * where keys are names of the states to which 
+     * the widget is transitioning
+     * and the values are functions are to be called upon
+     * the transitions
+     */
+    this._state_transition_event_handlers = {};
 };
 inherits(CategoryTree, WrappedElement);
 
@@ -513,51 +685,50 @@ CategoryTree.prototype.setData = function(data){
     this._data = data;
 };
 
-function recurse(data){
-    var c = '<li>';
-    $.each(data, function(index, value){
-      if (index == 'name'){
-        c += '<a href="#">' + value + '</a>';
-      } else {
-        if (index == 'children'){
-          if (value.length){
-            c += '<ul>';
-            $.each(value, function(ndx, val){
-              c += recurse(val);
-            });
-            c += '</ul>';
-          }
-        }
-      }
-    });
-    c += '</li>';
-    return c;
-};
-
+/**
+ * decorates any element by replacing its content
+ * with the nested <ul> HTML code representing the 
+ * category tree
+ */
 CategoryTree.prototype.decorate = function(element){
-    //decorate should take an existing element and 
-    //change it and possibly, add to it
-
-    //for example - the original div contains string
-    //"everything" and nothing else.
-    //you can inside that same div insert another one to
-    //hold "everything" and after, to the same 
-    //top level div add the <ul>
-    var me = this.makeElement('ul');//WrappedElement has this method
-    this._element = me;//should be this._element = element
-    //the "me" can be made a separate var on "this"
-
-    //todo: we need dom of these built via
-    //the jQuery api, the innerHTML assignment
-    //will not work, since we will have to elaborate
-    //more on what is inside the tree, and add event listeners
-    //to the categories and the levels of the tree
-    me.html(recurse(this._data));
-    element.html(me);
+    if (this._data === null){
+        return;
+    }
+    var tree_element = this.getElement();//calls this.createDom()
+    this._element = element;//need to replace element
+    //this._element.empty();
+    this._element.append(tree_element);
 };
 
+/**
+ * creates the nested HTML <ul> which represents
+ * the category tree. 
+ */
 CategoryTree.prototype.createDom = function(){
-    var element = $('<div></div>');
-    element.addClass('category-tree-menu');
-    this.decorate(element);
+    this._element = this.makeElement('ul');
+    var my_element = this._element;
+    this._children = [];
+    var tree_children = this._children;
+    var me = this;
+    $.each(this._data, function(idx, child_node){
+        //create the category and add it to the tree
+        var category = new Category(child_node);
+        my_element.append(category.getElement());
+        tree_children.push(category);
+        //build any subcategories recursively
+        category.buildSubtree();
+        //copy any state transition events
+        me.copyStateTransitionEventHandlersToObjects(me._children);
+    });
 };
+
+/**
+ * @inheritDoc
+ */
+CategoryTree.prototype.setStateTransitionEventHandler = setStateTransitionEventHandler;
+
+/**
+ * @inheritDoc
+ */
+CategoryTree.prototype.copyStateTransitionEventHandlersToObjects = 
+    copyStateTransitionEventHandlersToObjects;
