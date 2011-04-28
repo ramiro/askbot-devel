@@ -135,20 +135,23 @@ def add_category(request):
     Category IDs are the Django integer PKs of the respective model instances.
     """
     post_data = simplejson.loads(request.raw_post_data)
-    parent = post_data.get('parent')
+    parent_id = post_data.get('parent')
     new_name = post_data.get('name')
     if not new_name:
         raise exceptions.ValidationError(
             _("Missing or invalid new category name parameter")
             )
     # TODO: there is a chance of a race condition here
-    if parent:
+    if parent_id:
         try:
-            parent = Category.objects.get(id=parent)
+            parent = Category.objects.get(id=parent_id)
         except Category.DoesNotExist:
             raise exceptions.ValidationError(
                 _("Requested parent category doesn't exist")
                 )
+    else:
+        parent = None
+
     # tree levels values as per django-mptt are zero based
     if parent is not None and parent.level >= askbot_settings.CATEGORIES_MAX_TREE_DEPTH - 1:
         raise ValueError(_('Invalid category nesting depth level'))
