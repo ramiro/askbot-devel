@@ -96,5 +96,3 @@ class CategoriesApiTokenGenerator(object):
     def _now(self):
         # Used for mocking in tests
         return datetime.now()
-
-#default_token_generator = PasswordResetTokenGenerator()

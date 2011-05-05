@@ -139,7 +139,6 @@ class ViewsTests(AjaxTests):
         """AJAX category-related views shouldn't be published when master switch is off."""
         askbot_settings.update('ENABLE_CATEGORIES', False)
         r = self.ajax_post_json(reverse('add_category'), {'name': u'Entertainment', 'parent': self.root.id})
-        #print type(r), r.status_code, r.content
         self.assertEqual(r.status_code, 404)
         askbot_settings.update('ENABLE_CATEGORIES', True)
         r = self.ajax_post_json(reverse('add_category'), {'name': u'Family', 'parent': self.root.id})
@@ -375,7 +374,7 @@ class ViewsTests(AjaxTests):
         self.assertTrue("Missing required parameter" in data['message'])
 
     def test_remove_tag_category_success(self):
-        """Remove tag from category: should fail when no IDs are passed."""
+        """Remove tag from category: Success."""
         self.client.login(username='owner', password='secret')
         r = self.ajax_post_json(
             reverse('remove_tag_from_category'),

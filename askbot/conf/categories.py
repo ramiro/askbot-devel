@@ -39,7 +39,7 @@ settings.register(
         CATEGORIES,
         'TOP_LEVEL_CATEGORY_NAME',
         default='Everything',
-        description=_('Name of the category located ad the root of categories tree')
+        description=_('Name of the category located at the root of the categories tree')
     )
 )
 
