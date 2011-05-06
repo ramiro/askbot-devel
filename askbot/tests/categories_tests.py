@@ -24,32 +24,32 @@ class TreeTests(TestCase):
         """
         Test that django-mptt builds the tree correctly. version 0.4.2 has a
         bug when populating the tree, it incorrectly grafts the Child1 and
-        Child2 nodes under N2.
+        Child2 nodes under the N2 node.
         """
         self.assertEqual(
             {
                 "name": u"Root",
-                "id": (1, 1),
+                "id": 1,
                 "children": [
                     {
                         "name": u"N1",
-                        "id": (1, 2),
+                        "id": 2,
                         "children": [
                             {
                                 "name": u"Child1",
-                                "id": (1, 3),
+                                "id": 4,
                                 "children": []
                             },
                             {
                                 "name": u"Child2",
-                                "id": (1, 5),
+                                "id": 5,
                                 "children": []
                             }
                         ]
                     },
                     {
                         "name": u"N2",
-                        "id": (1, 8),
+                        "id": 3,
                         "children": []
                     }
 
